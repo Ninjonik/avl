@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVL Strom Vizualizátor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-dim: #6a6a8a;
+    --accent: #7b5ea7;
+    --accent2: #00d4aa;
+    --highlight: #ffd700;
+    --red: #ff3b5c;
+    --red-glow: rgba(255,59,92,0.4);
+    --blue: #4a9eff;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    padding: 0 24px;
+    height: 53px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  header h1 span.avl { color: var(--accent2); }
+  header h1 span.sep { color: var(--accent); }
+
+  .header-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .bf-legend {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bf-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-dim);
+  }
+  .bf-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .bf-dot.balanced  { background: var(--accent2); box-shadow: 0 0 6px rgba(0,212,170,0.5); }
+  .bf-dot.left-heavy { background: var(--blue);  box-shadow: 0 0 6px rgba(74,158,255,0.5); }
+  .bf-dot.right-heavy { background: var(--accent); box-shadow: 0 0 6px rgba(123,94,167,0.5); }
+  .bf-dot.critical  { background: var(--red);   box-shadow: 0 0 6px var(--red-glow); }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 53px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ops-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ops-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .num-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .num-input:focus { border-color: var(--accent2); }
+  .num-input::placeholder { color: var(--text-dim); }
+
+  .op-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .op-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 8px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .op-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(123,94,167,0.1); }
+  .op-btn.insert { border-color: var(--accent2); color: var(--accent2); }
+  .op-btn.insert:hover { background: rgba(0,212,170,0.1); }
+  .op-btn.delete { border-color: var(--red); color: var(--red); }
+  .op-btn.delete:hover { background: rgba(255,59,92,0.1); }
+  .op-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* LOG PANEL */
+  .log-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .log-header {
+    padding: 12px 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .log-entries {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-entries::-webkit-scrollbar { width: 4px; }
+  .log-entries::-webkit-scrollbar-track { background: transparent; }
+  .log-entries::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 5px;
+    border-left: 3px solid transparent;
+    background: var(--surface2);
+    color: var(--text-dim);
+    transition: all 0.3s;
+    line-height: 1.5;
+    animation: fadeIn 0.2s ease;
+  }
+  .log-entry.active {
+    border-left-color: var(--accent2);
+    color: var(--text);
+    background: rgba(0,212,170,0.08);
+  }
+  .log-entry.done { opacity: 0.5; }
+
+  @keyframes fadeIn {
+    from { opacity:0; transform: translateY(4px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    vertical-align: middle;
+  }
+  .tag.prop   { background: rgba(123,94,167,0.3);  color: var(--accent); }
+  .tag.action { background: rgba(0,212,170,0.2);   color: var(--accent2); }
+  .tag.case   { background: rgba(255,215,0,0.2);   color: var(--highlight); }
+  .tag.result { background: rgba(255,59,92,0.2);   color: var(--red); }
+  .tag.info   { background: rgba(255,255,255,0.05); color: var(--text-dim); }
+  .tag.found  { background: rgba(0,212,170,0.3);   color: var(--accent2); }
+  .tag.rot    { background: rgba(255,215,0,0.25);  color: var(--highlight); }
+  .tag.bf     { background: rgba(74,158,255,0.2);  color: var(--blue); }
+
+  /* PLAYBACK */
+  .playback-bar {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .pb-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .pb-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pb-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .pb-btn.play-btn { border-color: var(--accent2); color: var(--accent2); }
+  .pb-btn.play-btn:hover { background: rgba(0,212,170,0.1); }
+  .pb-progress {
+    flex: 1;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .pb-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .speed-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .speed-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+  /* CANVAS */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(0,212,170,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(123,94,167,0.04) 0%, transparent 50%);
+  }
+  #tree-svg {
+    width: 100%; height: 100%;
+    display: block;
+    cursor: grab;
+  }
+  #tree-svg:active { cursor: grabbing; }
+
+  /* STATS */
+  .stats-bar {
+    position: absolute;
+    top: 12px; left: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .stat-pill strong { color: var(--text); font-weight: 600; }
+
+  /* ZOOM */
+  .zoom-controls {
+    position: absolute;
+    bottom: 16px; left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 10;
+  }
+  .zoom-btn {
+    width: 28px; height: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .zoom-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+  /* KB HINT */
+  .kb-hint {
+    position: absolute;
+    bottom: 16px; right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    gap: 12px;
+    z-index: 10;
+  }
+  .kb-hint span { display: flex; align-items: center; gap: 4px; }
+  .kb-key {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    top: 20px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    z-index: 10000;
+    transform: translateX(200%);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    max-width: 300px;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.error   { border-color: var(--red);    color: var(--red); }
+  .toast.success { border-color: var(--accent2); color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="avl">AVL</span><span class="sep"> · </span>Strom</h1>
+  <div class="header-badge">Adelson-Velsky &amp; Landis</div>
+  <div class="header-badge">Vyvážený BVS · O(log n)</div>
+
+  <!-- BF legenda -->
+  <div class="bf-legend">
+    <span class="header-badge" style="color:var(--text-dim); margin-right:4px;">BF</span>
+    <div class="bf-item"><div class="bf-dot balanced"></div>= 0</div>
+    <div class="bf-item"><div class="bf-dot left-heavy"></div>= -1 (vlevo)</div>
+    <div class="bf-item"><div class="bf-dot right-heavy"></div>= +1 (vpravo)</div>
+    <div class="bf-item"><div class="bf-dot critical"></div>= ±2 (kritický!)</div>
+  </div>
+</header>
+
+<div class="main">
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="ops-section">
+      <div class="ops-label">Operace</div>
+      <div class="input-row">
+        <input type="number" class="num-input" id="num-input" placeholder="číslo…" min="1" max="9999">
+      </div>
+      <div class="op-grid">
+        <button class="op-btn insert" id="btn-insert">⊕ Insert</button>
+        <button class="op-btn delete" id="btn-delete">⊖ Delete</button>
+        <button class="op-btn" id="btn-find">◎ Find</button>
+        <button class="op-btn" id="btn-min">↓ Min</button>
+        <button class="op-btn" id="btn-max">↑ Max</button>
+        <button class="op-btn" id="btn-succ">→ Succ</button>
+        <button class="op-btn" id="btn-pred">← Pred</button>
+        <button class="op-btn" id="btn-clear" style="grid-column:span 2; color:var(--text-dim);">✕ Clear Tree</button>
+      </div>
+    </div>
+
+    <div class="log-section">
+      <div class="log-header">
+        <div class="log-title">Kroky</div>
+        <div class="step-counter" id="step-counter">—</div>
+      </div>
+      <div class="log-entries" id="log-entries">
+        <div class="log-entry active">
+          <span class="tag info">INFO</span>
+          Vítejte! Zadejte číslo nebo nechte prázdné pro náhodné.
+        </div>
+      </div>
+      <div class="playback-bar">
+        <button class="pb-btn" id="pb-first">⏮</button>
+        <button class="pb-btn" id="pb-prev">◀</button>
+        <button class="pb-btn play-btn" id="pb-play">▶</button>
+        <button class="pb-btn" id="pb-next">▶▶</button>
+        <button class="pb-btn" id="pb-last">⏭</button>
+        <div class="pb-progress"><div class="pb-fill" id="pb-fill"></div></div>
+        <div class="speed-btn" id="speed-btn">1×</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div class="stats-bar">
+      <div class="stat-pill">uzly <strong id="stat-n">0</strong></div>
+      <div class="stat-pill">výška <strong id="stat-h">0</strong></div>
+      <div class="stat-pill">rotace <strong id="stat-r">0</strong></div>
+    </div>
+    <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="zoom-controls">
+      <div class="zoom-btn" id="zoom-in">+</div>
+      <div class="zoom-btn" id="zoom-fit">⊡</div>
+      <div class="zoom-btn" id="zoom-out">−</div>
+    </div>
+    <div class="kb-hint">
+      <span><span class="kb-key">←</span><span class="kb-key">→</span> kroky</span>
+      <span><span class="kb-key">Space</span> play</span>
+      <span><span class="kb-key">Enter</span> insert</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =====================================================================
+//  AVL STROM — implementace
+//
+//  Invariant: Pro každý uzel x:
+//    BF(x) = výška(pravý podstrom) - výška(levý podstrom) ∈ {-1, 0, +1}
+//
+//  Po každém Insert / Delete opravujeme BF směrem od listu ke kořeni.
+//  Pokud BF = ±2, provedeme příslušnou rotaci:
+//    Případ LL → Pravá rotace
+//    Případ RR → Levá rotace
+//    Případ LR → Levá rotace syna + Pravá rotace uzlu
+//    Případ RL → Pravá rotace syna + Levá rotace uzlu
+// =====================================================================
+
+class AVLNode {
+  constructor(key) {
+    this.key    = key;
+    this.left   = null;
+    this.right  = null;
+    this.height = 1;      // výška podstromu s kořenem v tomto uzlu
+    this.id     = AVLNode._id++;
+  }
+}
+AVLNode._id = 0;
+
+class AVLTree {
+  constructor() {
+    this.root       = null;
+    this._steps     = [];
+    this._rotations = 0;
+  }
+
+  // ── Pomocné ───────────────────────────────────────────────────────
+  _h(n)  { return n ? n.height : 0; }
+  _bf(n) { return n ? this._h(n.right) - this._h(n.left) : 0; }
+  _updateHeight(n) { if (n) n.height = 1 + Math.max(this._h(n.left), this._h(n.right)); }
+
+  _step(tag, msg, hl = {}) {
+    this._steps.push({ tag, msg, highlights: { ...hl }, treeSnapshot: this._snapshot() });
+  }
+
+  _snapshot() {
+    const clone = n => {
+      if (!n) return null;
+      const c = new AVLNode(n.key);
+      c.height = n.height; c.id = n.id;
+      c.left = clone(n.left); c.right = clone(n.right);
+      return c;
+    };
+    return clone(this.root);
+  }
+
+  // ── Rotace ────────────────────────────────────────────────────────
+  _rotateRight(y) {
+    const x  = y.left;
+    const T2 = x.right;
+    x.right  = y;
+    y.left   = T2;
+    this._updateHeight(y);
+    this._updateHeight(x);
+    this._rotations++;
+    return x;
+  }
+
+  _rotateLeft(x) {
+    const y  = x.right;
+    const T2 = y.left;
+    y.left   = x;
+    x.right  = T2;
+    this._updateHeight(x);
+    this._updateHeight(y);
+    this._rotations++;
+    return y;
+  }
+
+  // ── FIND ──────────────────────────────────────────────────────────
+  find(key) {
+    this._steps = [];
+    this._step('info', `<b>Najdi(${key})</b>: Prohledávám AVL strom od kořene (jako obyčejný BVS).`, {});
+    let cur = this.root;
+    while (cur) {
+      const h = {}; h[cur.id] = 'compare';
+      const bf = this._bf(cur);
+      this._step('info', `Uzel <b>${cur.key}</b> [BF=${bf > 0 ? '+' : ''}${bf}]: hledám <b>${key}</b>.`, h);
+      if (key === cur.key) {
+        const h2 = {}; h2[cur.id] = 'highlight';
+        this._step('found', `<span class="tag found">NALEZENO</span> Klíč <b>${key}</b> nalezen.`, h2);
+        return this._steps;
+      } else if (key < cur.key) {
+        this._step('info', `<b>${key}</b> < <b>${cur.key}</b> → jdu doleva.`, h);
+        cur = cur.left;
+      } else {
+        this._step('info', `<b>${key}</b> > <b>${cur.key}</b> → jdu doprava.`, h);
+        cur = cur.right;
+      }
+    }
+    this._step('result', `Klíč <b>${key}</b> není ve stromě.`, {});
+    return this._steps;
+  }
+
+  // ── MIN / MAX ─────────────────────────────────────────────────────
+  min() {
+    this._steps = [];
+    this._step('info', 'Minimum: sleduji vždy nejlevější cestu ke kořeni.', {});
+    let n = this.root;
+    if (!n) { this._step('result', 'Strom je prázdný.', {}); return this._steps; }
+    while (n.left) {
+      const h = {}; h[n.id] = 'compare';
+      this._step('info', `Uzel <b>${n.key}</b> má levého syna → jdu doleva.`, h);
+      n = n.left;
+    }
+    const h = {}; h[n.id] = 'highlight';
+    this._step('found', `<span class="tag found">MIN</span> Minimum je <b>${n.key}</b>.`, h);
+    return this._steps;
+  }
+
+  max() {
+    this._steps = [];
+    this._step('info', 'Maximum: sleduji vždy nejpravější cestu ke kořeni.', {});
+    let n = this.root;
+    if (!n) { this._step('result', 'Strom je prázdný.', {}); return this._steps; }
+    while (n.right) {
+      const h = {}; h[n.id] = 'compare';
+      this._step('info', `Uzel <b>${n.key}</b> má pravého syna → jdu doprava.`, h);
+      n = n.right;
+    }
+    const h = {}; h[n.id] = 'highlight';
+    this._step('found', `<span class="tag found">MAX</span> Maximum je <b>${n.key}</b>.`, h);
+    return this._steps;
+  }
+
+  // ── SUCCESSOR / PREDECESSOR ───────────────────────────────────────
+  successor(key) {
+    this._steps = [];
+    this._step('info', `<b>Nástupce(${key})</b>: hledám nejmenší klíč větší než <b>${key}</b>.`, {});
+    const node = this._findNode(this.root, key);
+    if (!node) { this._step('result', `Klíč <b>${key}</b> není ve stromě.`, {}); return this._steps; }
+    const h = {}; h[node.id] = 'highlight';
+    this._step('info', `Uzel <b>${key}</b> nalezen.`, h);
+
+    if (node.right) {
+      this._step('info', `Uzel má pravý podstrom → nástupce = minimum pravého podstromu.`, h);
+      let cur = node.right;
+      while (cur.left) { const h2={}; h2[cur.id]='compare'; this._step('info', `Jdu doleva od <b>${cur.key}</b>.`, h2); cur = cur.left; }
+      const h3={}; h3[cur.id]='highlight';
+      this._step('found', `<span class="tag found">NÁSTUPCE</span> Nástupce klíče <b>${key}</b> je <b>${cur.key}</b>.`, h3);
+    } else {
+      this._step('info', `Uzel nemá pravý podstrom → jdu nahoru, dokud nepřijdu z levého syna.`, h);
+      let succ = null, cur = this.root;
+      while (cur) {
+        if (key < cur.key)      { succ = cur; cur = cur.left; }
+        else if (key > cur.key) { cur = cur.right; }
+        else break;
+      }
+      if (succ) { const h3={}; h3[succ.id]='highlight'; this._step('found', `<span class="tag found">NÁSTUPCE</span> Nástupce klíče <b>${key}</b> je <b>${succ.key}</b>.`, h3); }
+      else      { this._step('result', `<b>${key}</b> je maximum — nástupce neexistuje.`, {}); }
+    }
+    return this._steps;
+  }
+
+  predecessor(key) {
+    this._steps = [];
+    this._step('info', `<b>Předchůdce(${key})</b>: hledám největší klíč menší než <b>${key}</b>.`, {});
+    const node = this._findNode(this.root, key);
+    if (!node) { this._step('result', `Klíč <b>${key}</b> není ve stromě.`, {}); return this._steps; }
+    const h = {}; h[node.id] = 'highlight';
+    this._step('info', `Uzel <b>${key}</b> nalezen.`, h);
+
+    if (node.left) {
+      this._step('info', `Uzel má levý podstrom → předchůdce = maximum levého podstromu.`, h);
+      let cur = node.left;
+      while (cur.right) { const h2={}; h2[cur.id]='compare'; this._step('info', `Jdu doprava od <b>${cur.key}</b>.`, h2); cur = cur.right; }
+      const h3={}; h3[cur.id]='highlight';
+      this._step('found', `<span class="tag found">PŘEDCHŮDCE</span> Předchůdce klíče <b>${key}</b> je <b>${cur.key}</b>.`, h3);
+    } else {
+      this._step('info', `Uzel nemá levý podstrom → jdu nahoru, dokud nepřijdu z pravého syna.`, h);
+      let pred = null, cur = this.root;
+      while (cur) {
+        if (key > cur.key)      { pred = cur; cur = cur.right; }
+        else if (key < cur.key) { cur = cur.left; }
+        else break;
+      }
+      if (pred) { const h3={}; h3[pred.id]='highlight'; this._step('found', `<span class="tag found">PŘEDCHŮDCE</span> Předchůdce klíče <b>${key}</b> je <b>${pred.key}</b>.`, h3); }
+      else      { this._step('result', `<b>${key}</b> je minimum — předchůdce neexistuje.`, {}); }
+    }
+    return this._steps;
+  }
+
+  _findNode(n, key) {
+    if (!n) return null;
+    if (key === n.key) return n;
+    return key < n.key ? this._findNode(n.left, key) : this._findNode(n.right, key);
+  }
+
+  // ── INSERT ────────────────────────────────────────────────────────
+  insert(key) {
+    this._steps = [];
+    this._step('info', `<b>Insert(${key})</b>: Vložím jako do BVS, pak opravím rovnováhu zdola nahoru.`, {});
+    if (this._findNode(this.root, key)) {
+      this._step('result', `Klíč <b>${key}</b> již ve stromě existuje. Vkládání přerušeno.`, {});
+      return this._steps;
+    }
+    this.root = this._insert(this.root, key);
+    this._step('result', `<span class="tag result">HOTOVO</span> Insert(<b>${key}</b>) dokončen. AVL invariant splněn.`, {});
+    return this._steps;
+  }
+
+  _insert(node, key) {
+    // Standardní BVS insert
+    if (!node) {
+      const n = new AVLNode(key);
+      const h = {}; h[n.id] = 'new';
+      this._step('action', `<span class="tag action">VLOŽENO</span> Nový uzel <b>${key}</b> vytvořen jako list (výška=1, BF=0).`, h);
+      return n;
+    }
+
+    const h = {}; h[node.id] = 'compare';
+    if (key < node.key) {
+      this._step('info', `<b>${key}</b> < <b>${node.key}</b> → jdu doleva.`, h);
+      node.left = this._insert(node.left, key);
+    } else {
+      this._step('info', `<b>${key}</b> > <b>${node.key}</b> → jdu doprava.`, h);
+      node.right = this._insert(node.right, key);
+    }
+
+    this._updateHeight(node);
+    return this._balance(node, key);
+  }
+
+  _balance(node, triggerKey = null) {
+    const bf = this._bf(node);
+    const h  = {}; h[node.id] = 'compare';
+
+    this._step('bf', `<span class="tag bf">BF</span> Aktualizuji uzel <b>${node.key}</b>: výška=${node.height}, BF=${bf > 0 ? '+' : ''}${bf}.`, h);
+
+    if (bf < -1) {
+      // Levá nerovnováha (LL nebo LR)
+      const leftBF = this._bf(node.left);
+      if (leftBF <= 0) {
+        // LL případ → Pravá rotace
+        const h2 = {}; h2[node.id] = 'compare'; if (node.left) h2[node.left.id] = 'compare';
+        this._step('case', `<span class="tag case">LL PŘÍPAD</span> BF(${node.key})=${bf}, BF(${node.left ? node.left.key : '?'})=${leftBF}. Levá-Levá nerovnováha → Pravá rotace(${node.key}).`, h2);
+        const newRoot = this._rotateRight(node);
+        const h3 = {}; h3[newRoot.id] = 'highlight';
+        this._step('rot', `<span class="tag rot">ROTACE</span> Pravá rotace dokončena. Nový kořen podstromu: <b>${newRoot.key}</b>.`, h3);
+        return newRoot;
+      } else {
+        // LR případ → Levá rotace syna + Pravá rotace uzlu
+        const h2 = {}; h2[node.id] = 'compare'; if (node.left) h2[node.left.id] = 'compare';
+        this._step('case', `<span class="tag case">LR PŘÍPAD</span> BF(${node.key})=${bf}, BF(${node.left ? node.left.key : '?'})=${leftBF}. Levá-Pravá nerovnováha → nejdříve Levá rotace(${node.left ? node.left.key : '?'}), pak Pravá rotace(${node.key}).`, h2);
+        node.left = this._rotateLeft(node.left);
+        const h3 = {}; if (node.left) h3[node.left.id] = 'compare';
+        this._step('rot', `<span class="tag rot">ROTACE 1/2</span> Levá rotace provedena. Nyní provádím Pravou rotaci(${node.key}).`, h3);
+        const newRoot = this._rotateRight(node);
+        const h4 = {}; h4[newRoot.id] = 'highlight';
+        this._step('rot', `<span class="tag rot">ROTACE 2/2</span> Pravá rotace dokončena. Nový kořen podstromu: <b>${newRoot.key}</b>.`, h4);
+        return newRoot;
+      }
+    }
+
+    if (bf > 1) {
+      // Pravá nerovnováha (RR nebo RL)
+      const rightBF = this._bf(node.right);
+      if (rightBF >= 0) {
+        // RR případ → Levá rotace
+        const h2 = {}; h2[node.id] = 'compare'; if (node.right) h2[node.right.id] = 'compare';
+        this._step('case', `<span class="tag case">RR PŘÍPAD</span> BF(${node.key})=+${bf}, BF(${node.right ? node.right.key : '?'})=+${rightBF}. Pravá-Pravá nerovnováha → Levá rotace(${node.key}).`, h2);
+        const newRoot = this._rotateLeft(node);
+        const h3 = {}; h3[newRoot.id] = 'highlight';
+        this._step('rot', `<span class="tag rot">ROTACE</span> Levá rotace dokončena. Nový kořen podstromu: <b>${newRoot.key}</b>.`, h3);
+        return newRoot;
+      } else {
+        // RL případ → Pravá rotace syna + Levá rotace uzlu
+        const h2 = {}; h2[node.id] = 'compare'; if (node.right) h2[node.right.id] = 'compare';
+        this._step('case', `<span class="tag case">RL PŘÍPAD</span> BF(${node.key})=+${bf}, BF(${node.right ? node.right.key : '?'})=${rightBF}. Pravá-Levá nerovnováha → nejdříve Pravá rotace(${node.right ? node.right.key : '?'}), pak Levá rotace(${node.key}).`, h2);
+        node.right = this._rotateRight(node.right);
+        const h3 = {}; if (node.right) h3[node.right.id] = 'compare';
+        this._step('rot', `<span class="tag rot">ROTACE 1/2</span> Pravá rotace provedena. Nyní provádím Levou rotaci(${node.key}).`, h3);
+        const newRoot = this._rotateLeft(node);
+        const h4 = {}; h4[newRoot.id] = 'highlight';
+        this._step('rot', `<span class="tag rot">ROTACE 2/2</span> Levá rotace dokončena. Nový kořen podstromu: <b>${newRoot.key}</b>.`, h4);
+        return newRoot;
+      }
+    }
+
+    // BF ∈ {-1, 0, +1} — strom je vyvážen
+    const bfStr = bf > 0 ? `+${bf}` : `${bf}`;
+    const h2 = {}; h2[node.id] = bf === 0 ? 'highlight' : 'compare';
+    this._step('prop', `<span class="tag prop">OK</span> Uzel <b>${node.key}</b> má BF=${bfStr} ∈ {-1, 0, +1} — AVL invariant splněn. ✓`, h2);
+    return node;
+  }
+
+  // ── DELETE ────────────────────────────────────────────────────────
+  delete(key) {
+    this._steps = [];
+    this._step('info', `<b>Delete(${key})</b>: Odstraním jako z BVS, pak opravím rovnováhu zdola nahoru.`, {});
+    if (!this._findNode(this.root, key)) {
+      this._step('result', `Klíč <b>${key}</b> není ve stromě. Mazání přerušeno.`, {});
+      return this._steps;
+    }
+    this.root = this._delete(this.root, key);
+    this._step('result', `<span class="tag result">HOTOVO</span> Delete(<b>${key}</b>) dokončen. AVL invariant splněn.`, {});
+    return this._steps;
+  }
+
+  _delete(node, key) {
+    if (!node) return null;
+
+    const h = {}; h[node.id] = 'compare';
+    if (key < node.key) {
+      this._step('info', `<b>${key}</b> < <b>${node.key}</b> → jdu doleva.`, h);
+      node.left = this._delete(node.left, key);
+    } else if (key > node.key) {
+      this._step('info', `<b>${key}</b> > <b>${node.key}</b> → jdu doprava.`, h);
+      node.right = this._delete(node.right, key);
+    } else {
+      // Našli jsme uzel
+      const hf = {}; hf[node.id] = 'highlight';
+      this._step('action', `<span class="tag action">NALEZENO</span> Mazám uzel <b>${key}</b>.`, hf);
+
+      if (!node.left || !node.right) {
+        // 0 nebo 1 syn
+        const child = node.left || node.right;
+        if (!child) {
+          this._step('action', `<span class="tag action">LIST</span> Uzel <b>${key}</b> je list — jednoduše odstraním.`, hf);
+          return null;
+        } else {
+          const hc = {}; hc[child.id] = 'new';
+          this._step('action', `<span class="tag action">1 SYN</span> Uzel <b>${key}</b> má jednoho syna <b>${child.key}</b> — nahradím rodičem.`, hc);
+          return child;
+        }
+      } else {
+        // 2 synové — najdi in-order nástupce (min pravého podstromu)
+        let succ = node.right;
+        while (succ.left) succ = succ.left;
+        const hs = {}; hs[succ.id] = 'compare';
+        this._step('action', `<span class="tag action">2 SYNOVÉ</span> Uzel <b>${key}</b> má dva syny. In-order nástupce je <b>${succ.key}</b> (min pravého podstromu).`, hs);
+        node.key = succ.key;
+        const hn = {}; hn[node.id] = 'new';
+        this._step('action', `<span class="tag action">NAHRAZENÍ</span> Klíč uzlu nahrazen hodnotou <b>${succ.key}</b>. Teď mažu nástupce z pravého podstromu.`, hn);
+        node.right = this._delete(node.right, succ.key);
+      }
+    }
+
+    this._updateHeight(node);
+    return this._balance(node);
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────
+  getAllKeys() {
+    const keys = [];
+    const inorder = n => { if (!n) return; inorder(n.left); keys.push(n.key); inorder(n.right); };
+    inorder(this.root);
+    return keys;
+  }
+  countNodes() { let c = 0; const w = n => { if (!n) return; c++; w(n.left); w(n.right); }; w(this.root); return c; }
+  getHeight()  { return this._h(this.root); }
+}
+
+// =====================================================================
+//  RENDERER
+// =====================================================================
+
+let tree     = new AVLTree();
+let steps    = [], currentStep = -1, isPlaying = false, playTimer = null, playSpeed = 1;
+let vt       = { x: 0, y: 0, scale: 1 };
+let isDragging = false, dragStart = { x: 0, y: 0 };
+
+const NS  = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('tree-svg');
+let svgG  = null;
+
+const R_NODE  = 24;   // polomer uzlu
+const LEVEL_H = 80;   // vertikální rozestup
+
+function subtreeW(n) {
+  if (!n) return R_NODE * 2 + 10;
+  if (!n.left && !n.right) return R_NODE * 2 + 10;
+  const lw = subtreeW(n.left);
+  const rw = subtreeW(n.right);
+  return lw + rw + 14;
+}
+
+function computeLayout(root) {
+  const pos = {};
+  if (!root) return pos;
+  function assign(n, cx, y) {
+    if (!n) return;
+    pos[n.id] = { x: cx, y };
+    if (!n.left && !n.right) return;
+    const lw = subtreeW(n.left);
+    const rw = subtreeW(n.right);
+    const total = lw + rw + 14;
+    const leftCx  = cx - rw / 2 - 7;
+    const rightCx = cx + lw / 2 + 7;
+    assign(n.left,  leftCx,  y + LEVEL_H);
+    assign(n.right, rightCx, y + LEVEL_H);
+  }
+  assign(root, (svg.clientWidth || 800) / 2, 56);
+  return pos;
+}
+
+// Barva uzlu podle BF
+function nodeColor(n, hl) {
+  if (hl === 'highlight' || hl === 'found') return { fill:'#0a2a1f', stroke:'#00d4aa', sw:'2.5', textFill:'#00d4aa' };
+  if (hl === 'compare')  return { fill:'#2a2500', stroke:'#ffd700', sw:'2.5', textFill:'#ffd700' };
+  if (hl === 'new')      return { fill:'#1e1028', stroke:'#7b5ea7', sw:'2.5', textFill:'#b89ad4' };
+
+  // per BF
+  const bf = n ? (n.right ? n.right.height : 0) - (n.left ? n.left.height : 0) : 0;
+  if      (bf ===  0) return { fill:'#0d1f1a', stroke:'#00d4aa', sw:'1.5', textFill:'#00d4aa' };
+  else if (bf === -1) return { fill:'#0d1828', stroke:'#4a9eff', sw:'1.5', textFill:'#7ab4ff' };
+  else if (bf === +1) return { fill:'#1a1028', stroke:'#7b5ea7', sw:'1.5', textFill:'#b89ad4' };
+  else                return { fill:'#2a0a10', stroke:'#ff3b5c', sw:'2.5', textFill:'#ff3b5c' }; // ±2 kritický
+}
+
+function renderTree(snapshot, highlights = {}) {
+  svg.innerHTML = '';
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('transform', `translate(${vt.x},${vt.y}) scale(${vt.scale})`);
+  svgG = g; svg.appendChild(g);
+  if (!snapshot) { updateStats(); return; }
+
+  const pos = computeLayout(snapshot);
+
+  // ── edges ──
+  function drawEdges(n) {
+    if (!n) return;
+    const np = pos[n.id]; if (!np) return;
+    ['left','right'].forEach(dir => {
+      const c = n[dir]; if (!c) return;
+      const cp = pos[c.id]; if (!cp) return;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', np.x); line.setAttribute('y1', np.y + R_NODE);
+      line.setAttribute('x2', cp.x); line.setAttribute('y2', cp.y - R_NODE);
+      line.setAttribute('stroke', highlights[c.id] ? '#4a6a8a' : '#2a2a4a');
+      line.setAttribute('stroke-width', highlights[c.id] ? '2' : '1.5');
+      line.setAttribute('stroke-opacity', '0.8');
+      g.appendChild(line);
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  }
+  drawEdges(snapshot);
+
+  // ── nodes ──
+  function drawNode(n) {
+    if (!n) return;
+    const np  = pos[n.id]; if (!np) return;
+    const hl  = highlights[n.id];
+    const col = nodeColor(n, hl);
+
+    // compute bf for display
+    const lh = n.left  ? n.left.height  : 0;
+    const rh = n.right ? n.right.height : 0;
+    const bf = rh - lh;
+
+    // shadow
+    const shad = document.createElementNS(NS, 'circle');
+    shad.setAttribute('cx', np.x + 2); shad.setAttribute('cy', np.y + 3);
+    shad.setAttribute('r', R_NODE); shad.setAttribute('fill', 'rgba(0,0,0,0.4)');
+    g.appendChild(shad);
+
+    const gn = document.createElementNS(NS, 'g');
+    gn.setAttribute('transform', `translate(${np.x},${np.y})`);
+
+    // glow ring
+    if (hl) {
+      const glow = document.createElementNS(NS, 'circle');
+      glow.setAttribute('cx','0'); glow.setAttribute('cy','0');
+      glow.setAttribute('r', R_NODE + 7);
+      glow.setAttribute('fill', 'none');
+      glow.setAttribute('stroke', col.stroke);
+      glow.setAttribute('stroke-width', '1.5');
+      glow.setAttribute('stroke-opacity', '0.35');
+      gn.appendChild(glow);
+    }
+
+    // main circle
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('cx','0'); circle.setAttribute('cy','0');
+    circle.setAttribute('r', R_NODE);
+    circle.setAttribute('fill', col.fill);
+    circle.setAttribute('stroke', col.stroke);
+    circle.setAttribute('stroke-width', col.sw);
+    gn.appendChild(circle);
+
+    // key text
+    const keyTxt = document.createElementNS(NS, 'text');
+    keyTxt.setAttribute('x','0'); keyTxt.setAttribute('y','1');
+    keyTxt.setAttribute('text-anchor','middle'); keyTxt.setAttribute('dominant-baseline','central');
+    keyTxt.setAttribute('font-family','JetBrains Mono, monospace');
+    keyTxt.setAttribute('font-size', n.key >= 100 ? '11' : '13');
+    keyTxt.setAttribute('font-weight','700');
+    keyTxt.setAttribute('fill', col.textFill);
+    keyTxt.setAttribute('pointer-events','none');
+    keyTxt.textContent = n.key;
+    gn.appendChild(keyTxt);
+
+    // BF badge — malý štítek nad/pod uzlem
+    const bfLabel = document.createElementNS(NS, 'g');
+    bfLabel.setAttribute('transform', `translate(${R_NODE - 2}, ${-R_NODE + 2})`);
+
+    const bfRect = document.createElementNS(NS, 'rect');
+    bfRect.setAttribute('x','-9'); bfRect.setAttribute('y','-8');
+    bfRect.setAttribute('width','18'); bfRect.setAttribute('height','13');
+    bfRect.setAttribute('rx','3');
+    const bfAbsolute = Math.abs(bf);
+    bfRect.setAttribute('fill',
+      bf === 0  ? 'rgba(0,212,170,0.15)' :
+      bf === -1 ? 'rgba(74,158,255,0.15)' :
+      bf === 1  ? 'rgba(123,94,167,0.15)' :
+      'rgba(255,59,92,0.25)');
+    bfRect.setAttribute('stroke',
+      bf === 0  ? '#00d4aa' :
+      bf === -1 ? '#4a9eff' :
+      bf === 1  ? '#7b5ea7' : '#ff3b5c');
+    bfRect.setAttribute('stroke-width','1');
+    bfLabel.appendChild(bfRect);
+
+    const bfTxt = document.createElementNS(NS, 'text');
+    bfTxt.setAttribute('x','0'); bfTxt.setAttribute('y','0');
+    bfTxt.setAttribute('text-anchor','middle'); bfTxt.setAttribute('dominant-baseline','central');
+    bfTxt.setAttribute('font-family','JetBrains Mono, monospace');
+    bfTxt.setAttribute('font-size','8');
+    bfTxt.setAttribute('font-weight','700');
+    bfTxt.setAttribute('fill',
+      bf === 0  ? '#00d4aa' :
+      bf === -1 ? '#4a9eff' :
+      bf === 1  ? '#7b5ea7' : '#ff3b5c');
+    bfTxt.setAttribute('pointer-events','none');
+    bfTxt.textContent = bf > 0 ? `+${bf}` : `${bf}`;
+    bfLabel.appendChild(bfTxt);
+
+    gn.appendChild(bfLabel);
+    g.appendChild(gn);
+
+    drawNode(n.left); drawNode(n.right);
+  }
+  drawNode(snapshot);
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-n').textContent = tree.countNodes();
+  document.getElementById('stat-h').textContent = tree.getHeight();
+  document.getElementById('stat-r').textContent = tree._rotations;
+}
+
+// =====================================================================
+//  KROK ENGINE
+// =====================================================================
+
+function setSteps(ns) {
+  steps = ns; currentStep = -1; stopPlay();
+  if (steps.length > 0) goToStep(0);
+  updatePlaybackUI();
+}
+
+function goToStep(idx) {
+  if (!steps.length) return;
+  idx = Math.max(0, Math.min(idx, steps.length - 1));
+  currentStep = idx;
+  const s = steps[idx];
+  renderTree(s.treeSnapshot, s.highlights || {});
+  renderLog(); updatePlaybackUI();
+}
+
+function renderLog() {
+  const c = document.getElementById('log-entries');
+  c.innerHTML = '';
+  steps.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'log-entry' + (i === currentStep ? ' active' : i < currentStep ? ' done' : '');
+    d.innerHTML = s.msg;
+    c.appendChild(d);
+    if (i === currentStep) setTimeout(() => d.scrollIntoView({ block:'nearest', behavior:'smooth' }), 50);
+  });
+  document.getElementById('step-counter').textContent = steps.length ? `${currentStep + 1} / ${steps.length}` : '—';
+  document.getElementById('pb-fill').style.width = steps.length > 1 ? `${(currentStep / (steps.length - 1)) * 100}%` : '0%';
+}
+
+function updatePlaybackUI() {
+  document.getElementById('pb-prev').disabled  = currentStep <= 0;
+  document.getElementById('pb-next').disabled  = currentStep >= steps.length - 1;
+  document.getElementById('pb-first').disabled = currentStep <= 0;
+  document.getElementById('pb-last').disabled  = currentStep >= steps.length - 1;
+  document.getElementById('pb-play').textContent = isPlaying ? '⏸' : '▶';
+}
+
+function startPlay() {
+  if (currentStep >= steps.length - 1) goToStep(0);
+  isPlaying = true; updatePlaybackUI();
+  playTimer = setInterval(() => {
+    if (currentStep >= steps.length - 1) { stopPlay(); return; }
+    goToStep(currentStep + 1);
+  }, 1200 / playSpeed);
+}
+function stopPlay() { isPlaying = false; if (playTimer) { clearInterval(playTimer); playTimer = null; } updatePlaybackUI(); }
+function togglePlay() { isPlaying ? stopPlay() : startPlay(); }
+
+// =====================================================================
+//  HELPERS
+// =====================================================================
+
+function randomNotInTree() {
+  const keys = new Set(tree.getAllKeys()); let v, att = 0;
+  do { v = Math.floor(Math.random() * 99) + 1; att++; } while (keys.has(v) && att < 300);
+  return keys.has(v) ? null : v;
+}
+function randomInTree() { const k = tree.getAllKeys(); return k.length ? k[Math.floor(Math.random() * k.length)] : null; }
+
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+function getVal(needsInTree = false, needsNotInTree = false) {
+  const inp = document.getElementById('num-input'), raw = inp.value.trim();
+  if (raw === '') {
+    if (needsNotInTree) { const v = randomNotInTree(); if (!v) { showToast('Strom je plný (1-99)!', 'error'); return null; } inp.value = v; return v; }
+    if (needsInTree)    { const v = randomInTree();    if (!v) { showToast('Strom je prázdný!',     'error'); return null; } inp.value = v; return v; }
+    const v = randomInTree(); if (v !== null) inp.value = v; return v;
+  }
+  const n = parseInt(raw);
+  if (isNaN(n)) { showToast('Zadejte platné číslo.', 'error'); return null; }
+  return n;
+}
+
+// =====================================================================
+//  TLAČÍTKA
+// =====================================================================
+
+document.getElementById('btn-insert').addEventListener('click', () => {
+  const v = getVal(false, true); if (v === null) return;
+  setSteps(tree.insert(v)); renderTree(tree.root, {});
+  document.getElementById('num-input').value = '';
+});
+document.getElementById('btn-delete').addEventListener('click', () => {
+  const v = getVal(true); if (v === null) return;
+  setSteps(tree.delete(v)); renderTree(tree.root, {});
+  document.getElementById('num-input').value = '';
+});
+document.getElementById('btn-find').addEventListener('click', () => { const v = getVal(true); if (v !== null) setSteps(tree.find(v)); });
+document.getElementById('btn-min').addEventListener('click',  () => setSteps(tree.min()));
+document.getElementById('btn-max').addEventListener('click',  () => setSteps(tree.max()));
+document.getElementById('btn-succ').addEventListener('click', () => { const v = getVal(true); if (v !== null) setSteps(tree.successor(v)); });
+document.getElementById('btn-pred').addEventListener('click', () => { const v = getVal(true); if (v !== null) setSteps(tree.predecessor(v)); });
+document.getElementById('btn-clear').addEventListener('click', () => {
+  stopPlay(); tree = new AVLTree(); steps = []; currentStep = -1;
+  renderTree(null, {});
+  document.getElementById('log-entries').innerHTML = '<div class="log-entry active"><span class="tag info">INFO</span> Strom vyčištěn.</div>';
+  document.getElementById('step-counter').textContent = '—';
+  document.getElementById('pb-fill').style.width = '0%';
+  updatePlaybackUI(); updateStats();
+});
+
+document.getElementById('pb-play').addEventListener('click',  togglePlay);
+document.getElementById('pb-prev').addEventListener('click',  () => { stopPlay(); goToStep(currentStep - 1); });
+document.getElementById('pb-next').addEventListener('click',  () => { stopPlay(); goToStep(currentStep + 1); });
+document.getElementById('pb-first').addEventListener('click', () => { stopPlay(); goToStep(0); });
+document.getElementById('pb-last').addEventListener('click',  () => { stopPlay(); goToStep(steps.length - 1); });
+
+const SPEEDS = [0.5, 1, 2, 4]; let speedIdx = 1;
+document.getElementById('speed-btn').addEventListener('click', () => {
+  speedIdx = (speedIdx + 1) % SPEEDS.length; playSpeed = SPEEDS[speedIdx];
+  document.getElementById('speed-btn').textContent = playSpeed + '×';
+  if (isPlaying) { stopPlay(); startPlay(); }
+});
+
+// Zoom
+document.getElementById('zoom-in').addEventListener('click',  () => { vt.scale = Math.min(3, vt.scale * 1.2); refreshT(); });
+document.getElementById('zoom-out').addEventListener('click', () => { vt.scale = Math.max(0.2, vt.scale / 1.2); refreshT(); });
+document.getElementById('zoom-fit').addEventListener('click', () => {
+  vt = { x: 0, y: 0, scale: 1 };
+  const snap = steps.length && currentStep >= 0 ? steps[currentStep].treeSnapshot : tree.root;
+  const hl   = steps.length && currentStep >= 0 ? steps[currentStep].highlights || {} : {};
+  renderTree(snap, hl);
+});
+function refreshT() { if (svgG) svgG.setAttribute('transform', `translate(${vt.x},${vt.y}) scale(${vt.scale})`); }
+
+// Pan
+svg.addEventListener('mousedown',  e => { isDragging = true; dragStart = { x: e.clientX - vt.x, y: e.clientY - vt.y }; });
+svg.addEventListener('mousemove',  e => { if (!isDragging) return; vt.x = e.clientX - dragStart.x; vt.y = e.clientY - dragStart.y; refreshT(); });
+svg.addEventListener('mouseup',    () => isDragging = false);
+svg.addEventListener('mouseleave', () => isDragging = false);
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  vt.scale = Math.max(0.2, Math.min(3, vt.scale * (e.deltaY < 0 ? 1.1 : 0.9)));
+  refreshT();
+}, { passive: false });
+
+// Klávesnice
+document.addEventListener('keydown', e => {
+  if (e.target === document.getElementById('num-input')) { if (e.key === 'Enter') document.getElementById('btn-insert').click(); return; }
+  if (e.key === 'ArrowLeft')  { stopPlay(); goToStep(currentStep - 1); e.preventDefault(); }
+  if (e.key === 'ArrowRight') { stopPlay(); goToStep(currentStep + 1); e.preventDefault(); }
+  if (e.key === ' ')          { togglePlay(); e.preventDefault(); }
+  if (e.key === 'Enter')      { document.getElementById('btn-insert').click(); }
+});
+
+// =====================================================================
+//  INICIALIZACE
+// =====================================================================
+
+function showWelcome() {
+  const snap = tree._snapshot();
+  setSteps([
+    { msg: `<span class="tag info">INFO</span> AVL strom inicializován (Adelson-Velsky &amp; Landis, 1962).`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag prop">INVARIANT</span> Pro každý uzel x: BF(x) = výška(pravý podstrom) − výška(levý podstrom) ∈ {−1, 0, +1}.`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag prop">VÝŠKA</span> AVL strom s n uzly má výšku nejvýše 1.44 · log₂(n+2). Garantuje O(log n) pro všechny operace.`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag case">LL PŘÍPAD</span> BF(uzlu) = −2, BF(levého syna) ≤ 0 → Pravá rotace(uzel).`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag case">RR PŘÍPAD</span> BF(uzlu) = +2, BF(pravého syna) ≥ 0 → Levá rotace(uzel).`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag case">LR PŘÍPAD</span> BF(uzlu) = −2, BF(levého syna) = +1 → Levá rot.(syn) + Pravá rot.(uzel).`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag case">RL PŘÍPAD</span> BF(uzlu) = +2, BF(pravého syna) = −1 → Pravá rot.(syn) + Levá rot.(uzel).`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag bf">BF BADGE</span> Každý uzel zobrazuje svůj aktuální balance factor (BF). Barevné kódování viz legenda nahoře.`, highlights:{}, treeSnapshot: snap },
+    { msg: `<span class="tag info">INFO</span> Zadejte číslo a zvolte operaci. Nechte prázdné pro náhodnou hodnotu!`, highlights:{}, treeSnapshot: snap },
+  ]);
+}
+
+// Seed s výchozími hodnotami
+[30, 15, 50, 10, 20, 40, 60, 5, 25, 45].forEach(v => { tree.insert(v); tree._steps = []; });
+renderTree(tree.root, {});
+showWelcome();
+</script>
+</body>
+</html>

@@ -6,9 +6,8 @@ Krátký repozitář obsahující interaktivní vizualizace:
 - `abtree.html` — (a,b)-strom vizualizátor
 - `rbtree.html` — červeno‑černý strom vizualizátor
 
-### Contributions
+### Příspěvky
 
-Jsou vítány. \
-Klidně otevřete pull request (PR) s opravami nebo vylepšeními.
+Příspěvky jsou vítány — klidně otevřete pull request (PR).
 
 ---
