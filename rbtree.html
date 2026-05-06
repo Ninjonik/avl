@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Červeno-Černý Strom</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --red: #ff3b5c;
+    --red-glow: rgba(255,59,92,0.4);
+    --black-node: #1e1e2e;
+    --black-node-border: #4a4a6a;
+    --black-node-glow: rgba(74,74,106,0.5);
+    --text: #e8e8f0;
+    --text-dim: #6a6a8a;
+    --accent: #7b5ea7;
+    --accent2: #00d4aa;
+    --highlight: #ffd700;
+    --highlight-glow: rgba(255,215,0,0.5);
+    --edge: #3a3a5a;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  header h1 span.r { color: var(--red); }
+  header h1 span.b { color: var(--black-node-border); }
+  .header-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 53px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ops-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ops-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .num-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .num-input:focus { border-color: var(--accent); }
+  .num-input::placeholder { color: var(--text-dim); }
+
+  .op-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .op-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 8px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .op-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(123,94,167,0.1); }
+  .op-btn.insert { border-color: var(--accent2); color: var(--accent2); }
+  .op-btn.insert:hover { background: rgba(0,212,170,0.1); }
+  .op-btn.delete { border-color: var(--red); color: var(--red); }
+  .op-btn.delete:hover { background: rgba(255,59,92,0.1); }
+  .op-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* LOG PANEL */
+  .log-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .log-header {
+    padding: 12px 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .log-entries {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-entries::-webkit-scrollbar { width: 4px; }
+  .log-entries::-webkit-scrollbar-track { background: transparent; }
+  .log-entries::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 5px;
+    border-left: 3px solid transparent;
+    background: var(--surface2);
+    color: var(--text-dim);
+    transition: all 0.3s;
+    line-height: 1.5;
+  }
+  .log-entry.active {
+    border-left-color: var(--accent2);
+    color: var(--text);
+    background: rgba(0,212,170,0.08);
+  }
+  .log-entry.done {
+    opacity: 0.5;
+  }
+  .log-entry .tag {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    vertical-align: middle;
+  }
+  .tag.prop { background: rgba(123,94,167,0.3); color: var(--accent); }
+  .tag.action { background: rgba(0,212,170,0.2); color: var(--accent2); }
+  .tag.case { background: rgba(255,215,0,0.2); color: var(--highlight); }
+  .tag.result { background: rgba(255,59,92,0.2); color: var(--red); }
+  .tag.info { background: rgba(255,255,255,0.05); color: var(--text-dim); }
+  .tag.found { background: rgba(0,212,170,0.3); color: var(--accent2); }
+
+  /* PLAYBACK BAR */
+  .playback-bar {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .pb-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .pb-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pb-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .pb-btn.play-btn { border-color: var(--accent2); color: var(--accent2); }
+  .pb-btn.play-btn:hover { background: rgba(0,212,170,0.1); }
+  .pb-progress {
+    flex: 1;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .pb-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .speed-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .speed-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    background-image: 
+      radial-gradient(circle at 20% 20%, rgba(123,94,167,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255,59,92,0.03) 0%, transparent 50%);
+  }
+  #tree-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* SVG node styles via JS but define CSS for transitions */
+  .node-circle {
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    z-index: 1000;
+    transform: translateX(200%);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 260px;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.success { border-color: var(--accent2); color: var(--accent2); }
+
+  /* KEYBOARD HINT */
+  .kb-hint {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    gap: 12px;
+  }
+  .kb-hint span { display: flex; align-items: center; gap: 4px; }
+  .kb-key {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+  }
+
+  /* STATS */
+  .stats-bar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .stat-pill strong { color: var(--text); font-weight: 600; }
+
+  /* ZOOM */
+  .zoom-controls {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .zoom-btn {
+    width: 28px;
+    height: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .zoom-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+  /* Animation keyframes */
+  @keyframes pulse-highlight {
+    0%, 100% { filter: drop-shadow(0 0 8px var(--highlight-glow)); }
+    50% { filter: drop-shadow(0 0 20px var(--highlight-glow)); }
+  }
+  @keyframes pulse-red {
+    0%, 100% { filter: drop-shadow(0 0 8px var(--red-glow)); }
+    50% { filter: drop-shadow(0 0 20px var(--red-glow)); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .log-entry { animation: fadeIn 0.2s ease; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="r">Červeno</span>-<span class="b">Černý</span> Strom</h1>
+  <div class="header-badge">BST · O(log n)</div>
+  <div class="header-badge">TIN060 Vizualizátor</div>
+</header>
+
+<div class="main">
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="ops-section">
+      <div class="ops-label">Operace</div>
+      <div class="input-row">
+        <input type="number" class="num-input" id="num-input" placeholder="číslo…" min="1" max="999">
+      </div>
+      <div class="op-grid">
+        <button class="op-btn insert" id="btn-insert">⊕ Insert</button>
+        <button class="op-btn delete" id="btn-delete">⊖ Delete</button>
+        <button class="op-btn" id="btn-find">◎ Find</button>
+        <button class="op-btn" id="btn-min">↓ Min</button>
+        <button class="op-btn" id="btn-max">↑ Max</button>
+        <button class="op-btn" id="btn-succ">→ Succ</button>
+        <button class="op-btn" id="btn-pred">← Pred</button>
+        <button class="op-btn" id="btn-clear" style="grid-column:span 2; color:var(--text-dim);">✕ Clear Tree</button>
+      </div>
+    </div>
+
+    <div class="log-section">
+      <div class="log-header">
+        <div class="log-title">Kroky</div>
+        <div class="step-counter" id="step-counter">—</div>
+      </div>
+      <div class="log-entries" id="log-entries">
+        <div class="log-entry active">
+          <span class="tag info">INFO</span>
+          Vítejte! Vložte číslo nebo nechte prázdné pro náhodné.
+        </div>
+      </div>
+      <div class="playback-bar">
+        <button class="pb-btn" id="pb-first" title="První krok">⏮</button>
+        <button class="pb-btn" id="pb-prev" title="← Předchozí">◀</button>
+        <button class="pb-btn play-btn" id="pb-play" title="Přehrát / Pauza">▶</button>
+        <button class="pb-btn" id="pb-next" title="Další →">▶▶</button>
+        <button class="pb-btn" id="pb-last" title="Poslední krok">⏭</button>
+        <div class="pb-progress"><div class="pb-fill" id="pb-fill"></div></div>
+        <div class="speed-btn" id="speed-btn">1×</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div class="canvas-area">
+    <div class="stats-bar">
+      <div class="stat-pill">uzly <strong id="stat-n">0</strong></div>
+      <div class="stat-pill">výška <strong id="stat-h">0</strong></div>
+      <div class="stat-pill">černá výška <strong id="stat-bh">0</strong></div>
+    </div>
+    <svg id="tree-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="zoom-controls">
+      <div class="zoom-btn" id="zoom-in">+</div>
+      <div class="zoom-btn" id="zoom-fit">⊡</div>
+      <div class="zoom-btn" id="zoom-out">−</div>
+    </div>
+    <div class="kb-hint">
+      <span><span class="kb-key">←</span><span class="kb-key">→</span> kroky</span>
+      <span><span class="kb-key">Space</span> play</span>
+      <span><span class="kb-key">Enter</span> insert</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =====================================================================
+// RED-BLACK TREE IMPLEMENTATION (consistent with TIN060 theory)
+// =====================================================================
+
+const RED = 'RED';
+const BLACK = 'BLACK';
+const EXTERNAL = 'EXTERNAL';
+const INTERNAL = 'INTERNAL';
+
+class RBNode {
+  constructor(key, type = INTERNAL, color = RED) {
+    this.key = key;
+    this.type = type;
+    this.color = color;
+    this.left = null;
+    this.right = null;
+    this.parent = null;
+    this.id = RBNode._idCounter++;
+    // layout
+    this.x = 0;
+    this.y = 0;
+    this.targetX = 0;
+    this.targetY = 0;
+  }
+}
+RBNode._idCounter = 0;
+
+function makeExternal(parent) {
+  const n = new RBNode(null, EXTERNAL, BLACK);
+  n.parent = parent;
+  return n;
+}
+
+class RBTree {
+  constructor() {
+    this.root = null;
+    this._steps = [];
+    this._highlightMap = {}; // nodeId -> 'highlight'|'compare'|'new'|'rotate'
+  }
+
+  _isExternal(n) { return !n || n.type === EXTERNAL; }
+  _isRed(n) { return n && n.type === INTERNAL && n.color === RED; }
+  _isBlack(n) { return !n || n.color === BLACK; }
+
+  // --- step logging ---
+  _step(tag, msg, highlights = {}) {
+    this._steps.push({ tag, msg, highlights: { ...highlights }, treeSnapshot: this._snapshot() });
+  }
+
+  _snapshot() {
+    // deep clone tree structure for snapshot
+    const clone = (n, parent = null) => {
+      if (!n) return null;
+      const c = { key: n.key, type: n.type, color: n.color, id: n.id, parent: null };
+      c.left = clone(n.left, c);
+      c.right = clone(n.right, c);
+      c.parent = parent;
+      return c;
+    };
+    return clone(this.root);
+  }
+
+  // --- rotations ---
+  _leftRotate(x) {
+    const y = x.right;
+    x.right = y.left;
+    if (!this._isExternal(y.left)) y.left.parent = x;
+    else if (y.left) y.left.parent = x;
+    y.parent = x.parent;
+    if (!x.parent) this.root = y;
+    else if (x === x.parent.left) x.parent.left = y;
+    else x.parent.right = y;
+    y.left = x;
+    x.parent = y;
+  }
+
+  _rightRotate(x) {
+    const y = x.left;
+    x.left = y.right;
+    if (!this._isExternal(y.right)) y.right.parent = x;
+    else if (y.right) y.right.parent = x;
+    y.parent = x.parent;
+    if (!x.parent) this.root = y;
+    else if (x === x.parent.right) x.parent.right = y;
+    else x.parent.left = y;
+    y.right = x;
+    x.parent = y;
+  }
+
+  // --- Find ---
+  find(key) {
+    this._steps = [];
+    this._step('info', `Hledám klíč <b>${key}</b> ve stromě.`, {});
+    let cur = this.root;
+    while (cur && !this._isExternal(cur)) {
+      const h = {};
+      h[cur.id] = 'compare';
+      if (cur.key === key) {
+        h[cur.id] = 'highlight';
+        this._step('found', `<span class="tag found">NALEZENO</span> Klíč <b>${key}</b> nalezen v uzlu.`, h);
+        return this._steps;
+      } else if (key < cur.key) {
+        this._step('info', `<b>${key}</b> < <b>${cur.key}</b>, jdu doleva.`, h);
+        cur = cur.left;
+      } else {
+        this._step('info', `<b>${key}</b> > <b>${cur.key}</b>, jdu doprava.`, h);
+        cur = cur.right;
+      }
+    }
+    this._step('result', `Klíč <b>${key}</b> není ve stromě (dosáhli jsme externího uzlu).`, {});
+    return this._steps;
+  }
+
+  // --- Min/Max ---
+  min() {
+    this._steps = [];
+    this._step('info', 'Minimum: jdeme stále doleva od kořene.', {});
+    let cur = this.root;
+    if (!cur || this._isExternal(cur)) { this._step('result', 'Strom je prázdný.', {}); return this._steps; }
+    while (cur.left && !this._isExternal(cur.left)) {
+      const h = {}; h[cur.id] = 'compare';
+      this._step('info', `Uzel <b>${cur.key}</b> má levého syna, jdeme doleva.`, h);
+      cur = cur.left;
+    }
+    const h = {}; h[cur.id] = 'highlight';
+    this._step('found', `<span class="tag found">MIN</span> Minimum je <b>${cur.key}</b>.`, h);
+    return this._steps;
+  }
+
+  max() {
+    this._steps = [];
+    this._step('info', 'Maximum: jdeme stále doprava od kořene.', {});
+    let cur = this.root;
+    if (!cur || this._isExternal(cur)) { this._step('result', 'Strom je prázdný.', {}); return this._steps; }
+    while (cur.right && !this._isExternal(cur.right)) {
+      const h = {}; h[cur.id] = 'compare';
+      this._step('info', `Uzel <b>${cur.key}</b> má pravého syna, jdeme doprava.`, h);
+      cur = cur.right;
+    }
+    const h = {}; h[cur.id] = 'highlight';
+    this._step('found', `<span class="tag found">MAX</span> Maximum je <b>${cur.key}</b>.`, h);
+    return this._steps;
+  }
+
+  _findNode(key) {
+    let cur = this.root;
+    while (cur && !this._isExternal(cur)) {
+      if (cur.key === key) return cur;
+      cur = key < cur.key ? cur.left : cur.right;
+    }
+    return null;
+  }
+
+  successor(key) {
+    this._steps = [];
+    const node = this._findNode(key);
+    if (!node) { this._step('result', `Klíč <b>${key}</b> není ve stromě.`, {}); return this._steps; }
+    const h = {}; h[node.id] = 'highlight';
+    this._step('info', `Hledám následníka uzlu <b>${key}</b>.`, h);
+
+    if (!this._isExternal(node.right)) {
+      this._step('info', 'Uzel má pravého syna — minimum pravého podstromu je následník.', h);
+      let cur = node.right;
+      while (!this._isExternal(cur.left)) {
+        const h2 = {}; h2[cur.id] = 'compare';
+        this._step('info', `Jdu doleva od <b>${cur.key}</b>.`, h2);
+        cur = cur.left;
+      }
+      const h3 = {}; h3[cur.id] = 'highlight';
+      this._step('found', `<span class="tag found">SUCC</span> Následník je <b>${cur.key}</b>.`, h3);
+    } else {
+      this._step('info', 'Uzel nemá pravého syna — jdeme nahoru, dokud nepřijdeme z levého podstromu.', h);
+      let cur = node;
+      let p = cur.parent;
+      while (p && cur === p.right) {
+        const h2 = {}; h2[p.id] = 'compare';
+        this._step('info', `Přišli jsme z pravého syna uzlu <b>${p.key}</b>, jdeme výše.`, h2);
+        cur = p; p = p.parent;
+      }
+      if (p) {
+        const h3 = {}; h3[p.id] = 'highlight';
+        this._step('found', `<span class="tag found">SUCC</span> Následník je <b>${p.key}</b>.`, h3);
+      } else {
+        this._step('result', `Uzel <b>${key}</b> je maximum — nemá následníka.`, {});
+      }
+    }
+    return this._steps;
+  }
+
+  predecessor(key) {
+    this._steps = [];
+    const node = this._findNode(key);
+    if (!node) { this._step('result', `Klíč <b>${key}</b> není ve stromě.`, {}); return this._steps; }
+    const h = {}; h[node.id] = 'highlight';
+    this._step('info', `Hledám předchůdce uzlu <b>${key}</b>.`, h);
+
+    if (!this._isExternal(node.left)) {
+      this._step('info', 'Uzel má levého syna — maximum levého podstromu je předchůdce.', h);
+      let cur = node.left;
+      while (!this._isExternal(cur.right)) {
+        const h2 = {}; h2[cur.id] = 'compare';
+        this._step('info', `Jdu doprava od <b>${cur.key}</b>.`, h2);
+        cur = cur.right;
+      }
+      const h3 = {}; h3[cur.id] = 'highlight';
+      this._step('found', `<span class="tag found">PRED</span> Předchůdce je <b>${cur.key}</b>.`, h3);
+    } else {
+      this._step('info', 'Uzel nemá levého syna — jdeme nahoru, dokud nepřijdeme z pravého podstromu.', h);
+      let cur = node;
+      let p = cur.parent;
+      while (p && cur === p.left) {
+        const h2 = {}; h2[p.id] = 'compare';
+        this._step('info', `Přišli jsme z levého syna uzlu <b>${p.key}</b>, jdeme výše.`, h2);
+        cur = p; p = p.parent;
+      }
+      if (p) {
+        const h3 = {}; h3[p.id] = 'highlight';
+        this._step('found', `<span class="tag found">PRED</span> Předchůdce je <b>${p.key}</b>.`, h3);
+      } else {
+        this._step('result', `Uzel <b>${key}</b> je minimum — nemá předchůdce.`, {});
+      }
+    }
+    return this._steps;
+  }
+
+  // --- INSERT ---
+  insert(key) {
+    this._steps = [];
+    this._step('info', `<b>Insert(${key})</b>: Vkládám jako v obyčejném BVS a obarvím červeně.`, {});
+
+    // Standard BST insert
+    const newNode = new RBNode(key, INTERNAL, RED);
+    newNode.left = makeExternal(newNode);
+    newNode.right = makeExternal(newNode);
+
+    if (!this.root || this._isExternal(this.root)) {
+      this.root = newNode;
+      newNode.color = BLACK;
+      const h = {}; h[newNode.id] = 'new';
+      this._step('prop', `<span class="tag prop">VLAST. 2</span> Kořen je vždy černý — přebarvuji na černo.`, h);
+      this._step('result', `Vložení dokončeno. Kořen <b>${key}</b> je černý.`, h);
+      return this._steps;
+    }
+
+    let cur = this.root;
+    let parent = null;
+    while (!this._isExternal(cur)) {
+      parent = cur;
+      const h = {}; h[cur.id] = 'compare';
+      if (key === cur.key) {
+        this._step('result', `Klíč <b>${key}</b> již ve stromě existuje. Vkládání přerušeno.`, h);
+        return this._steps;
+      } else if (key < cur.key) {
+        this._step('info', `<b>${key}</b> < <b>${cur.key}</b>, jdu doleva.`, h);
+        cur = cur.left;
+      } else {
+        this._step('info', `<b>${key}</b> > <b>${cur.key}</b>, jdu doprava.`, h);
+        cur = cur.right;
+      }
+    }
+
+    newNode.parent = parent;
+    if (key < parent.key) parent.left = newNode;
+    else parent.right = newNode;
+
+    const h0 = {}; h0[newNode.id] = 'new';
+    this._step('action', `<span class="tag action">VLOŽENO</span> Uzel <b>${key}</b> vložen (červený). Kontroluji vlastnosti Č-Č stromu.`, h0);
+
+    // Fix violations
+    this._insertFix(newNode);
+
+    // Ensure root is black
+    if (this.root.color === RED) {
+      this.root.color = BLACK;
+      const h = {}; h[this.root.id] = 'highlight';
+      this._step('prop', `<span class="tag prop">VLAST. 2</span> Kořen přebarven na černý.`, h);
+    }
+
+    const hf = {}; hf[newNode.id] = 'highlight';
+    this._step('result', `<span class="tag result">HOTOVO</span> Vložení <b>${key}</b> dokončeno. Všechny vlastnosti Č-Č stromu splněny.`, {});
+    return this._steps;
+  }
+
+  _insertFix(z) {
+    while (z.parent && z.parent.color === RED) {
+      const parent = z.parent;
+      const grandpa = parent.parent;
+      if (!grandpa) break;
+
+      if (parent === grandpa.left) {
+        const uncle = grandpa.right;
+        if (this._isRed(uncle)) {
+          // CASE 1
+          const h = {}; h[z.id] = 'new'; h[parent.id] = 'compare'; h[uncle.id] = 'compare'; h[grandpa.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 1</span> Strýc uzlu je červený. Přebarvím otce a strýce na černo, dědečka na červeno.`, h);
+          parent.color = BLACK;
+          uncle.color = BLACK;
+          grandpa.color = RED;
+          const h2 = {}; h2[parent.id] = 'highlight'; h2[uncle.id] = 'highlight'; h2[grandpa.id] = 'new';
+          this._step('action', `<span class="tag action">PŘEBARVENO</span> Přesunutí "chyby" výše ke dědečkovi.`, h2);
+          z = grandpa;
+        } else {
+          if (z === parent.right) {
+            // CASE 2
+            const h = {}; h[z.id] = 'new'; h[parent.id] = 'compare';
+            this._step('case', `<span class="tag case">PŘÍPAD 2</span> Strýc je černý, x je pravý syn (opačná strana než y). Provedeme Levou Rotaci(otec).`, h);
+            z = parent;
+            this._leftRotate(z);
+            const h2 = {}; h2[z.id] = 'compare'; h2[z.parent.id] = 'new';
+            this._step('action', `<span class="tag action">ROTACE</span> Levá rotace provedena. Situace převedena na Případ 3.`, h2);
+          }
+          // CASE 3
+          const p3 = z.parent;
+          const g3 = p3.parent;
+          const h3 = {}; h3[z.id] = 'new'; h3[p3.id] = 'compare'; h3[g3.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 3</span> Strýc je černý, x je levý syn (stejná strana jako y). Pravá Rotace(dědeček) + přebarvení.`, h3);
+          p3.color = BLACK;
+          g3.color = RED;
+          this._rightRotate(g3);
+          const h4 = {}; h4[p3.id] = 'highlight'; h4[g3.id] = 'new';
+          this._step('action', `<span class="tag action">ROTACE</span> Pravá rotace + přebarvení. Vlastnosti Č-Č stromu obnoveny.`, h4);
+        }
+      } else {
+        // Mirror cases
+        const uncle = grandpa.left;
+        if (this._isRed(uncle)) {
+          const h = {}; h[z.id] = 'new'; h[parent.id] = 'compare'; h[uncle.id] = 'compare'; h[grandpa.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 1 (zrcadlo)</span> Strýc je červený. Přebarvuji otce, strýce a dědečka.`, h);
+          parent.color = BLACK;
+          uncle.color = BLACK;
+          grandpa.color = RED;
+          const h2 = {}; h2[parent.id] = 'highlight'; h2[uncle.id] = 'highlight'; h2[grandpa.id] = 'new';
+          this._step('action', `<span class="tag action">PŘEBARVENO</span> Přesunutí "chyby" výše.`, h2);
+          z = grandpa;
+        } else {
+          if (z === parent.left) {
+            const h = {}; h[z.id] = 'new'; h[parent.id] = 'compare';
+            this._step('case', `<span class="tag case">PŘÍPAD 2 (zrcadlo)</span> Strýc černý, x levý syn. Pravá Rotace(otec).`, h);
+            z = parent;
+            this._rightRotate(z);
+            const h2 = {}; h2[z.id] = 'compare'; h2[z.parent.id] = 'new';
+            this._step('action', `<span class="tag action">ROTACE</span> Pravá rotace. Převod na Případ 3.`, h2);
+          }
+          const p3 = z.parent;
+          const g3 = p3.parent;
+          const h3 = {}; h3[z.id] = 'new'; h3[p3.id] = 'compare'; h3[g3.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 3 (zrcadlo)</span> Strýc černý, x pravý syn. Levá Rotace(dědeček) + přebarvení.`, h3);
+          p3.color = BLACK;
+          g3.color = RED;
+          this._leftRotate(g3);
+          const h4 = {}; h4[p3.id] = 'highlight'; h4[g3.id] = 'new';
+          this._step('action', `<span class="tag action">ROTACE</span> Levá rotace + přebarvení. Hotovo.`, h4);
+        }
+      }
+    }
+    this.root.color = BLACK;
+  }
+
+  // --- DELETE ---
+  delete(key) {
+    this._steps = [];
+    const z = this._findNode(key);
+    if (!z) {
+      this._step('result', `Klíč <b>${key}</b> není ve stromě.`, {});
+      return this._steps;
+    }
+    const h = {}; h[z.id] = 'highlight';
+    this._step('info', `<b>Delete(${key})</b>: Preprocessing — odstraním jako v BVS.`, h);
+    this._rbDelete(z);
+    this._step('result', `<span class="tag result">HOTOVO</span> Odstranění <b>${key}</b> dokončeno.`, {});
+    return this._steps;
+  }
+
+  _rbDelete(z) {
+    let y = z;
+    let yOrigColor = y.color;
+    let x;
+
+    if (this._isExternal(z.left)) {
+      x = z.right;
+      const h = {}; h[z.id] = 'compare';
+      if (z.left && !this._isExternal(z.left)) {
+        this._step('info', `Uzel má pouze pravého syna. Transplantujeme pravý podstrom.`, h);
+      } else {
+        this._step('info', `Uzel <b>${z.key}</b> nemá levého syna (nebo má jen externí). Transplantujeme pravý podstrom.`, h);
+      }
+      this._transplant(z, z.right);
+    } else if (this._isExternal(z.right)) {
+      x = z.left;
+      const h = {}; h[z.id] = 'compare';
+      this._step('info', `Uzel <b>${z.key}</b> nemá pravého syna. Transplantujeme levý podstrom.`, h);
+      this._transplant(z, z.left);
+    } else {
+      // Find successor (min of right subtree)
+      y = z.right;
+      while (!this._isExternal(y.left)) y = y.left;
+      yOrigColor = y.color;
+      x = y.right;
+      const h = {}; h[y.id] = 'compare'; h[z.id] = 'highlight';
+      this._step('info', `Uzel <b>${z.key}</b> má oba syny. Nahradím ho nástupcem <b>${y.key}</b> (min. pravého podstromu).`, h);
+
+      if (y.parent !== z) {
+        this._transplant(y, y.right);
+        y.right = z.right;
+        if (y.right) y.right.parent = y;
+      }
+      this._transplant(z, y);
+      y.left = z.left;
+      if (y.left) y.left.parent = y;
+      y.color = z.color;
+      const h2 = {}; h2[y.id] = 'highlight';
+      this._step('action', `<span class="tag action">TRANSPLANT</span> Nástupce <b>${y.key}</b> převzal místo a barvu uzlu <b>${z.key}</b>.`, h2);
+    }
+
+    if (yOrigColor === BLACK) {
+      this._step('prop', `<span class="tag prop">VLAST. 4</span> Odebraný uzel byl černý — černá výška porušena. Spouštím opravnou proceduru.`, {});
+      this._deleteFix(x);
+    } else {
+      this._step('info', `Odebraný uzel byl červený — vlastnosti Č-Č stromu neporušeny.`, {});
+    }
+  }
+
+  _transplant(u, v) {
+    if (!u.parent) this.root = v;
+    else if (u === u.parent.left) u.parent.left = v;
+    else u.parent.right = v;
+    if (v) v.parent = u.parent;
+  }
+
+  _deleteFix(x) {
+    while (x !== this.root && this._isBlack(x)) {
+      const parent = x ? x.parent : null;
+      if (!parent) break;
+
+      if (x === parent.left) {
+        let w = parent.right;
+        if (!w) break;
+
+        if (this._isRed(w)) {
+          // Case 1
+          const h = {}; if (w) h[w.id] = 'compare'; h[parent.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 1</span> Bratr w je červený. Vyměníme barvy w a rodiče, Levá Rotace(rodič).`, h);
+          w.color = BLACK;
+          parent.color = RED;
+          this._leftRotate(parent);
+          w = parent.right;
+          const h2 = {}; if (w) h2[w.id] = 'highlight'; h2[parent.id] = 'new';
+          this._step('action', `<span class="tag action">ROTACE</span> Situace převedena na Případ 2, 3 nebo 4.`, h2);
+        }
+
+        if (!w) break;
+        if (this._isBlack(w.left) && this._isBlack(w.right)) {
+          // Case 2
+          const h = {}; h[w.id] = 'compare'; h[parent.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 2</span> Bratr w je černý se dvěma černými syny. Přebarvím w na červeno, posunu "extra černou" výše.`, h);
+          w.color = RED;
+          x = parent;
+          const h2 = {}; h2[w.id] = 'new'; h2[x.id] = 'compare';
+          this._step('action', `<span class="tag action">PŘEBARVENO</span> w přebarven na červeno. Pokračuji s rodičem.`, h2);
+        } else {
+          if (this._isBlack(w.right)) {
+            // Case 3
+            const h = {}; h[w.id] = 'compare'; if (w.left) h[w.left.id] = 'compare';
+            this._step('case', `<span class="tag case">PŘÍPAD 3</span> Bratr w černý, pravý syn černý, levý červený. Vyměním barvy w a lev. syna, Pravá Rotace(w).`, h);
+            if (w.left) w.left.color = BLACK;
+            w.color = RED;
+            this._rightRotate(w);
+            w = parent.right;
+            const h2 = {}; if (w) h2[w.id] = 'highlight';
+            this._step('action', `<span class="tag action">ROTACE</span> Převod na Případ 4.`, h2);
+          }
+          // Case 4
+          const h = {}; h[w.id] = 'compare'; h[parent.id] = 'compare'; if (w.right) h[w.right.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 4</span> Bratr w černý, pravý syn červený. Přebarvím, Levá Rotace(rodič). Hotovo.`, h);
+          w.color = parent.color;
+          parent.color = BLACK;
+          if (w.right) w.right.color = BLACK;
+          this._leftRotate(parent);
+          const h2 = {}; h2[parent.id] = 'highlight';
+          this._step('action', `<span class="tag action">ROTACE</span> Levá rotace provedena. Extra černá odstraněna.`, h2);
+          x = this.root;
+        }
+      } else {
+        // Mirror
+        let w = parent.left;
+        if (!w) break;
+
+        if (this._isRed(w)) {
+          const h = {}; if (w) h[w.id] = 'compare'; h[parent.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 1 (zrcadlo)</span> Bratr w je červený. Vyměníme barvy, Pravá Rotace(rodič).`, h);
+          w.color = BLACK;
+          parent.color = RED;
+          this._rightRotate(parent);
+          w = parent.left;
+          const h2 = {}; if (w) h2[w.id] = 'highlight'; h2[parent.id] = 'new';
+          this._step('action', `<span class="tag action">ROTACE</span> Pravá rotace. Pokračuji.`, h2);
+        }
+
+        if (!w) break;
+        if (this._isBlack(w.right) && this._isBlack(w.left)) {
+          const h = {}; h[w.id] = 'compare'; h[parent.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 2 (zrcadlo)</span> Bratr w černý se dvěma černými syny. Přebarvím w na červeno.`, h);
+          w.color = RED;
+          x = parent;
+          const h2 = {}; h2[w.id] = 'new'; h2[x.id] = 'compare';
+          this._step('action', `<span class="tag action">PŘEBARVENO</span> Posun extra černé výše.`, h2);
+        } else {
+          if (this._isBlack(w.left)) {
+            const h = {}; h[w.id] = 'compare'; if (w.right) h[w.right.id] = 'compare';
+            this._step('case', `<span class="tag case">PŘÍPAD 3 (zrcadlo)</span> Levý syn černý, pravý červený. Levá Rotace(w).`, h);
+            if (w.right) w.right.color = BLACK;
+            w.color = RED;
+            this._leftRotate(w);
+            w = parent.left;
+            const h2 = {}; if (w) h2[w.id] = 'highlight';
+            this._step('action', `<span class="tag action">ROTACE</span> Levá rotace. Převod na Případ 4.`, h2);
+          }
+          const h = {}; h[w.id] = 'compare'; h[parent.id] = 'compare'; if (w.left) h[w.left.id] = 'compare';
+          this._step('case', `<span class="tag case">PŘÍPAD 4 (zrcadlo)</span> Pravá Rotace(rodič) + přebarvení.`, h);
+          w.color = parent.color;
+          parent.color = BLACK;
+          if (w.left) w.left.color = BLACK;
+          this._rightRotate(parent);
+          const h2 = {}; h2[parent.id] = 'highlight';
+          this._step('action', `<span class="tag action">ROTACE</span> Pravá rotace. Extra černá odstraněna.`, h2);
+          x = this.root;
+        }
+      }
+    }
+    if (x) x.color = BLACK;
+  }
+
+  // Stats
+  getInternalNodes() {
+    const nodes = [];
+    const walk = n => {
+      if (!n || n.type === EXTERNAL) return;
+      nodes.push(n);
+      walk(n.left); walk(n.right);
+    };
+    walk(this.root);
+    return nodes;
+  }
+
+  getHeight(n = this.root) {
+    if (!n || n.type === EXTERNAL) return 0;
+    return 1 + Math.max(this.getHeight(n.left), this.getHeight(n.right));
+  }
+
+  getBlackHeight(n = this.root) {
+    if (!n || n.type === EXTERNAL) return 0;
+    const leftBH = this.getBlackHeight(n.left);
+    return leftBH + (n.color === BLACK ? 1 : 0);
+  }
+
+  getAllKeys() {
+    return this.getInternalNodes().map(n => n.key).sort((a,b) => a-b);
+  }
+}
+
+// =====================================================================
+// RENDERER
+// =====================================================================
+
+const svg = document.getElementById('tree-canvas');
+const NS = 'http://www.w3.org/2000/svg';
+
+let tree = new RBTree();
+let steps = [];
+let currentStep = -1;
+let isPlaying = false;
+let playTimer = null;
+let playSpeed = 1; // multiplier
+let viewTransform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+
+// Initialize with some values
+const INIT_VALUES = [41, 38, 31, 12, 19, 8];
+INIT_VALUES.forEach(v => {
+  tree.insert(v);
+});
+tree._steps = [];
+
+function getNodePositions(root) {
+  const positions = {};
+  const LEVEL_H = 72;
+  const BASE_SEP = 36;
+
+  function calcSubtreeWidth(n, depth) {
+    if (!n || n.type === EXTERNAL) return BASE_SEP;
+    const lw = calcSubtreeWidth(n.left, depth+1);
+    const rw = calcSubtreeWidth(n.right, depth+1);
+    return lw + rw;
+  }
+
+  function assign(n, x, y, leftBound, rightBound) {
+    if (!n || n.type === EXTERNAL) return;
+    positions[n.id] = { x, y };
+    const lw = calcSubtreeWidth(n.left, 0);
+    const rw = calcSubtreeWidth(n.right, 0);
+    const total = lw + rw;
+    const lx = x - rw / 2 - BASE_SEP / 4;
+    const rx = x + lw / 2 + BASE_SEP / 4;
+    assign(n.left, lx, y + LEVEL_H, leftBound, x);
+    assign(n.right, rx, y + LEVEL_H, x, rightBound);
+  }
+
+  if (!root || root.type === EXTERNAL) return positions;
+  const svgW = svg.clientWidth || 800;
+  assign(root, svgW / 2, 60, 0, svgW);
+  return positions;
+}
+
+function renderTree(snapshot, highlights = {}, animate = true) {
+  svg.innerHTML = '';
+
+  const positions = getNodePositions(snapshot);
+
+  // Draw edges first
+  function drawEdges(n) {
+    if (!n || n.type === EXTERNAL) return;
+    const pos = positions[n.id];
+    if (!pos) return;
+    if (n.left && n.left.type === INTERNAL) {
+      const lpos = positions[n.left.id];
+      if (lpos) {
+        const line = document.createElementNS(NS, 'line');
+        line.setAttribute('x1', pos.x); line.setAttribute('y1', pos.y);
+        line.setAttribute('x2', lpos.x); line.setAttribute('y2', lpos.y);
+        line.setAttribute('stroke', highlights[n.left.id] ? '#4a6a8a' : '#2a2a4a');
+        line.setAttribute('stroke-width', '1.5');
+        line.setAttribute('stroke-opacity', '0.8');
+        svg.appendChild(line);
+      }
+    }
+    if (n.right && n.right.type === INTERNAL) {
+      const rpos = positions[n.right.id];
+      if (rpos) {
+        const line = document.createElementNS(NS, 'line');
+        line.setAttribute('x1', pos.x); line.setAttribute('y1', pos.y);
+        line.setAttribute('x2', rpos.x); line.setAttribute('y2', rpos.y);
+        line.setAttribute('stroke', highlights[n.right.id] ? '#4a6a8a' : '#2a2a4a');
+        line.setAttribute('stroke-width', '1.5');
+        line.setAttribute('stroke-opacity', '0.8');
+        svg.appendChild(line);
+      }
+    }
+    drawEdges(n.left);
+    drawEdges(n.right);
+  }
+
+  drawEdges(snapshot);
+
+  // Draw nodes
+  function drawNode(n) {
+    if (!n || n.type === EXTERNAL) return;
+    const pos = positions[n.id];
+    if (!pos) return;
+
+    const hl = highlights[n.id];
+    const R = 22;
+
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('transform', `translate(${pos.x},${pos.y})`);
+    if (animate) {
+      g.style.opacity = '0';
+      g.style.animation = `fadeInNode 0.4s ease forwards`;
+    }
+
+    // Shadow / glow
+    const glow = document.createElementNS(NS, 'circle');
+    glow.setAttribute('r', R + 6);
+    glow.setAttribute('cx', '0');
+    glow.setAttribute('cy', '0');
+    glow.setAttribute('fill', 'none');
+    glow.setAttribute('stroke-width', '2');
+
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('r', R);
+    circle.setAttribute('cx', '0');
+    circle.setAttribute('cy', '0');
+    circle.setAttribute('stroke-width', '2');
+
+    if (hl === 'highlight' || hl === 'found') {
+      circle.setAttribute('fill', '#1a3a2a');
+      circle.setAttribute('stroke', '#00d4aa');
+      glow.setAttribute('stroke', '#00d4aa');
+      glow.setAttribute('stroke-opacity', '0.4');
+    } else if (hl === 'compare') {
+      circle.setAttribute('fill', '#2a2a1a');
+      circle.setAttribute('stroke', '#ffd700');
+      glow.setAttribute('stroke', '#ffd700');
+      glow.setAttribute('stroke-opacity', '0.4');
+    } else if (hl === 'new') {
+      circle.setAttribute('fill', n.color === RED ? '#3a1a20' : '#1e2a3a');
+      circle.setAttribute('stroke', n.color === RED ? '#ff3b5c' : '#7b9abf');
+      glow.setAttribute('stroke', n.color === RED ? '#ff3b5c' : '#7b9abf');
+      glow.setAttribute('stroke-opacity', '0.6');
+    } else if (n.color === RED) {
+      circle.setAttribute('fill', '#2a1018');
+      circle.setAttribute('stroke', '#ff3b5c');
+      glow.setAttribute('stroke', '#ff3b5c');
+      glow.setAttribute('stroke-opacity', '0.2');
+    } else {
+      circle.setAttribute('fill', '#1e1e2e');
+      circle.setAttribute('stroke', '#4a4a6a');
+      glow.setAttribute('stroke', 'transparent');
+    }
+
+    const text = document.createElementNS(NS, 'text');
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'central');
+    text.setAttribute('font-family', 'JetBrains Mono, monospace');
+    text.setAttribute('font-size', n.key >= 100 ? '11' : '13');
+    text.setAttribute('font-weight', '700');
+    text.setAttribute('fill', hl === 'highlight' || hl === 'found' ? '#00d4aa' :
+                              hl === 'compare' ? '#ffd700' :
+                              n.color === RED ? '#ff3b5c' : '#c8c8e8');
+    text.textContent = n.key;
+
+    g.appendChild(glow);
+    g.appendChild(circle);
+    g.appendChild(text);
+    svg.appendChild(g);
+
+    drawNode(n.left);
+    drawNode(n.right);
+  }
+
+  // Add fadeInNode keyframe if not already there
+  if (!document.getElementById('rb-anim-style')) {
+    const s = document.createElement('style');
+    s.id = 'rb-anim-style';
+    s.textContent = `@keyframes fadeInNode { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }`;
+    document.head.appendChild(s);
+  }
+
+  drawNode(snapshot);
+  updateStats();
+}
+
+function updateStats() {
+  const nodes = tree.getInternalNodes();
+  document.getElementById('stat-n').textContent = nodes.length;
+  document.getElementById('stat-h').textContent = tree.getHeight();
+  document.getElementById('stat-bh').textContent = tree.getBlackHeight();
+}
+
+// =====================================================================
+// STEP PLAYBACK ENGINE
+// =====================================================================
+
+function setSteps(newSteps) {
+  steps = newSteps;
+  currentStep = -1;
+  stopPlay();
+  renderLogEntries();
+  updatePlaybackUI();
+  if (steps.length > 0) goToStep(0);
+}
+
+function goToStep(idx) {
+  if (steps.length === 0) return;
+  idx = Math.max(0, Math.min(idx, steps.length - 1));
+  currentStep = idx;
+
+  const step = steps[idx];
+  renderTree(step.treeSnapshot || tree._snapshot(), step.highlights || {}, true);
+  renderLogEntries();
+  updatePlaybackUI();
+}
+
+function renderLogEntries() {
+  const container = document.getElementById('log-entries');
+  container.innerHTML = '';
+  steps.forEach((step, i) => {
+    const div = document.createElement('div');
+    div.className = 'log-entry' + (i === currentStep ? ' active' : i < currentStep ? ' done' : '');
+    div.innerHTML = step.msg;
+    container.appendChild(div);
+    if (i === currentStep) {
+      setTimeout(() => div.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50);
+    }
+  });
+
+  const counter = document.getElementById('step-counter');
+  if (steps.length > 0) {
+    counter.textContent = `${currentStep + 1} / ${steps.length}`;
+  } else {
+    counter.textContent = '—';
+  }
+
+  // Progress
+  const fill = document.getElementById('pb-fill');
+  fill.style.width = steps.length > 1 ? `${(currentStep / (steps.length-1)) * 100}%` : '0%';
+}
+
+function updatePlaybackUI() {
+  document.getElementById('pb-prev').disabled = currentStep <= 0;
+  document.getElementById('pb-next').disabled = currentStep >= steps.length - 1;
+  document.getElementById('pb-first').disabled = currentStep <= 0;
+  document.getElementById('pb-last').disabled = currentStep >= steps.length - 1;
+  document.getElementById('pb-play').textContent = isPlaying ? '⏸' : '▶';
+}
+
+function startPlay() {
+  if (currentStep >= steps.length - 1) goToStep(0);
+  isPlaying = true;
+  updatePlaybackUI();
+  const speeds = [0.5, 1, 2, 4];
+  const delay = 1200 / playSpeed;
+  playTimer = setInterval(() => {
+    if (currentStep >= steps.length - 1) {
+      stopPlay();
+      return;
+    }
+    goToStep(currentStep + 1);
+  }, delay);
+}
+
+function stopPlay() {
+  isPlaying = false;
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  updatePlaybackUI();
+}
+
+function togglePlay() {
+  if (isPlaying) stopPlay();
+  else startPlay();
+}
+
+// =====================================================================
+// RANDOM VALUE HELPERS
+// =====================================================================
+
+function randomNotInTree() {
+  const keys = new Set(tree.getAllKeys());
+  let v;
+  let attempts = 0;
+  do {
+    v = Math.floor(Math.random() * 99) + 1;
+    attempts++;
+  } while (keys.has(v) && attempts < 200);
+  return keys.has(v) ? null : v;
+}
+
+function randomInTree() {
+  const keys = tree.getAllKeys();
+  if (keys.length === 0) return null;
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
+// =====================================================================
+// TOAST
+// =====================================================================
+
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+// =====================================================================
+// BUTTON HANDLERS
+// =====================================================================
+
+function getInputValue(needsInTree = false, needsNotInTree = false) {
+  const input = document.getElementById('num-input');
+  let val = input.value.trim();
+  if (val === '') {
+    if (needsNotInTree) {
+      const v = randomNotInTree();
+      if (v === null) { showToast('Strom je plný!', 'error'); return null; }
+      input.value = v;
+      return v;
+    }
+    if (needsInTree) {
+      const v = randomInTree();
+      if (v === null) { showToast('Strom je prázdný!', 'error'); return null; }
+      input.value = v;
+      return v;
+    }
+    // for ops that work without value, return random in tree
+    const v = randomInTree();
+    if (v === null) return null;
+    input.value = v;
+    return v;
+  }
+  const n = parseInt(val);
+  if (isNaN(n)) { showToast('Zadejte platné číslo.', 'error'); return null; }
+  return n;
+}
+
+document.getElementById('btn-insert').addEventListener('click', () => {
+  const v = getInputValue(false, true);
+  if (v === null) return;
+  const s = tree.insert(v);
+  setSteps(s);
+  renderTree(tree.root, {});
+  document.getElementById('num-input').value = '';
+});
+
+document.getElementById('btn-delete').addEventListener('click', () => {
+  const v = getInputValue(true);
+  if (v === null) return;
+  const s = tree.delete(v);
+  setSteps(s);
+  renderTree(tree.root, {});
+  document.getElementById('num-input').value = '';
+});
+
+document.getElementById('btn-find').addEventListener('click', () => {
+  const v = getInputValue(true);
+  if (v === null) return;
+  const s = tree.find(v);
+  setSteps(s);
+});
+
+document.getElementById('btn-min').addEventListener('click', () => {
+  const s = tree.min();
+  setSteps(s);
+});
+
+document.getElementById('btn-max').addEventListener('click', () => {
+  const s = tree.max();
+  setSteps(s);
+});
+
+document.getElementById('btn-succ').addEventListener('click', () => {
+  const v = getInputValue(true);
+  if (v === null) return;
+  const s = tree.successor(v);
+  setSteps(s);
+});
+
+document.getElementById('btn-pred').addEventListener('click', () => {
+  const v = getInputValue(true);
+  if (v === null) return;
+  const s = tree.predecessor(v);
+  setSteps(s);
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  stopPlay();
+  tree = new RBTree();
+  steps = [];
+  currentStep = -1;
+  renderTree(null, {}, false);
+  document.getElementById('log-entries').innerHTML = '<div class="log-entry active"><span class="tag info">INFO</span>Strom vyčištěn.</div>';
+  document.getElementById('step-counter').textContent = '—';
+  document.getElementById('pb-fill').style.width = '0%';
+  updatePlaybackUI();
+  updateStats();
+});
+
+// Playback buttons
+document.getElementById('pb-play').addEventListener('click', togglePlay);
+document.getElementById('pb-prev').addEventListener('click', () => { stopPlay(); goToStep(currentStep - 1); });
+document.getElementById('pb-next').addEventListener('click', () => { stopPlay(); goToStep(currentStep + 1); });
+document.getElementById('pb-first').addEventListener('click', () => { stopPlay(); goToStep(0); });
+document.getElementById('pb-last').addEventListener('click', () => { stopPlay(); goToStep(steps.length - 1); });
+
+// Speed
+const speeds = [0.5, 1, 2, 4];
+let speedIdx = 1;
+document.getElementById('speed-btn').addEventListener('click', () => {
+  speedIdx = (speedIdx + 1) % speeds.length;
+  playSpeed = speeds[speedIdx];
+  document.getElementById('speed-btn').textContent = playSpeed + '×';
+  if (isPlaying) { stopPlay(); startPlay(); }
+});
+
+// Zoom
+document.getElementById('zoom-in').addEventListener('click', () => {
+  viewTransform.scale = Math.min(3, viewTransform.scale * 1.2);
+  applySVGTransform();
+});
+document.getElementById('zoom-out').addEventListener('click', () => {
+  viewTransform.scale = Math.max(0.3, viewTransform.scale / 1.2);
+  applySVGTransform();
+});
+document.getElementById('zoom-fit').addEventListener('click', () => {
+  viewTransform = { x: 0, y: 0, scale: 1 };
+  applySVGTransform();
+  setTimeout(() => renderTree(
+    steps.length > 0 && currentStep >= 0 ? steps[currentStep].treeSnapshot : tree.root,
+    steps.length > 0 && currentStep >= 0 ? steps[currentStep].highlights || {} : {},
+    false
+  ), 50);
+});
+
+let svgGroup = null;
+
+function applySVGTransform() {
+  if (svgGroup) {
+    svgGroup.setAttribute('transform', `translate(${viewTransform.x},${viewTransform.y}) scale(${viewTransform.scale})`);
+  }
+}
+
+// Pan
+svg.addEventListener('mousedown', e => {
+  isDragging = true;
+  dragStart = { x: e.clientX - viewTransform.x, y: e.clientY - viewTransform.y };
+  svg.style.cursor = 'grabbing';
+});
+svg.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  viewTransform.x = e.clientX - dragStart.x;
+  viewTransform.y = e.clientY - dragStart.y;
+  applySVGTransform();
+});
+svg.addEventListener('mouseup', () => { isDragging = false; svg.style.cursor = 'default'; });
+svg.addEventListener('mouseleave', () => { isDragging = false; svg.style.cursor = 'default'; });
+
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  viewTransform.scale = Math.max(0.3, Math.min(3, viewTransform.scale * factor));
+  applySVGTransform();
+}, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target === document.getElementById('num-input')) {
+    if (e.key === 'Enter') document.getElementById('btn-insert').click();
+    return;
+  }
+  if (e.key === 'ArrowLeft') { stopPlay(); goToStep(currentStep - 1); e.preventDefault(); }
+  if (e.key === 'ArrowRight') { stopPlay(); goToStep(currentStep + 1); e.preventDefault(); }
+  if (e.key === ' ') { togglePlay(); e.preventDefault(); }
+  if (e.key === 'Enter') document.getElementById('btn-insert').click();
+});
+
+// Override renderTree to use a wrapper group for zoom/pan
+const _origRenderTree = renderTree;
+function renderTree(snapshot, highlights = {}, animate = true) {
+  svg.innerHTML = '';
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('transform', `translate(${viewTransform.x},${viewTransform.y}) scale(${viewTransform.scale})`);
+  svgGroup = g;
+  svg.appendChild(g);
+
+  // Re-define inner render using g instead of svg
+  const svgTarget = g;
+
+  const positions = getNodePositions(snapshot);
+
+  function drawEdges(n) {
+    if (!n || n.type === EXTERNAL) return;
+    const pos = positions[n.id];
+    if (!pos) return;
+    ['left', 'right'].forEach(dir => {
+      const child = n[dir];
+      if (child && child.type === INTERNAL) {
+        const cpos = positions[child.id];
+        if (cpos) {
+          const line = document.createElementNS(NS, 'line');
+          line.setAttribute('x1', pos.x); line.setAttribute('y1', pos.y);
+          line.setAttribute('x2', cpos.x); line.setAttribute('y2', cpos.y);
+          line.setAttribute('stroke', highlights[child.id] ? '#4a7aaa' : '#2a2a4a');
+          line.setAttribute('stroke-width', '1.5');
+          line.setAttribute('stroke-opacity', '0.8');
+          svgTarget.appendChild(line);
+        }
+      }
+    });
+    drawEdges(n.left); drawEdges(n.right);
+  }
+
+  function drawNode(n) {
+    if (!n || n.type === EXTERNAL) return;
+    const pos = positions[n.id];
+    if (!pos) return;
+    const hl = highlights[n.id];
+    const R = 22;
+
+    const g2 = document.createElementNS(NS, 'g');
+    g2.setAttribute('transform', `translate(${pos.x},${pos.y})`);
+
+    const glow = document.createElementNS(NS, 'circle');
+    glow.setAttribute('r', R + 7); glow.setAttribute('cx','0'); glow.setAttribute('cy','0');
+    glow.setAttribute('fill','none'); glow.setAttribute('stroke-width','3');
+
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('r', R); circle.setAttribute('cx','0'); circle.setAttribute('cy','0');
+    circle.setAttribute('stroke-width','2.5');
+
+    if (hl === 'highlight' || hl === 'found') {
+      circle.setAttribute('fill','#0a2a1f'); circle.setAttribute('stroke','#00d4aa');
+      glow.setAttribute('stroke','#00d4aa'); glow.setAttribute('stroke-opacity','0.5');
+    } else if (hl === 'compare') {
+      circle.setAttribute('fill','#2a2500'); circle.setAttribute('stroke','#ffd700');
+      glow.setAttribute('stroke','#ffd700'); glow.setAttribute('stroke-opacity','0.4');
+    } else if (hl === 'new') {
+      circle.setAttribute('fill', n.color===RED?'#3a0f18':'#0f1a2a');
+      circle.setAttribute('stroke', n.color===RED?'#ff3b5c':'#7b9abf');
+      glow.setAttribute('stroke', n.color===RED?'#ff3b5c':'#7b9abf');
+      glow.setAttribute('stroke-opacity','0.7');
+    } else if (n.color === RED) {
+      circle.setAttribute('fill','#250f15'); circle.setAttribute('stroke','#ff3b5c');
+      glow.setAttribute('stroke','#ff3b5c'); glow.setAttribute('stroke-opacity','0.15');
+    } else {
+      circle.setAttribute('fill','#1a1a2e'); circle.setAttribute('stroke','#4a4a7a');
+      glow.setAttribute('stroke','transparent');
+    }
+
+    const text = document.createElementNS(NS, 'text');
+    text.setAttribute('text-anchor','middle'); text.setAttribute('dominant-baseline','central');
+    text.setAttribute('font-family','JetBrains Mono, monospace');
+    text.setAttribute('font-size', n.key >= 100 ? '11' : '13');
+    text.setAttribute('font-weight','700');
+    text.setAttribute('fill', hl==='highlight'||hl==='found'?'#00d4aa':
+                               hl==='compare'?'#ffd700':
+                               n.color===RED?'#ff6b85':'#b8b8d8');
+    text.setAttribute('pointer-events','none');
+    text.textContent = n.key;
+
+    g2.appendChild(glow); g2.appendChild(circle); g2.appendChild(text);
+    svgTarget.appendChild(g2);
+    drawNode(n.left); drawNode(n.right);
+  }
+
+  if (snapshot) {
+    drawEdges(snapshot);
+    drawNode(snapshot);
+  }
+
+  updateStats();
+}
+
+// Initial render
+renderTree(tree.root, {}, false);
+
+// Show welcome steps
+setSteps([
+  { msg: '<span class="tag info">INFO</span> Vítejte! Strom inicializován hodnotami 8, 12, 19, 31, 38, 41.', highlights: {}, treeSnapshot: tree._snapshot() },
+  { msg: '<span class="tag prop">VLAST. 1</span> Každý uzel je červený nebo černý.', highlights: {}, treeSnapshot: tree._snapshot() },
+  { msg: '<span class="tag prop">VLAST. 2</span> Každý externí uzel (NIL) je černý.', highlights: {}, treeSnapshot: tree._snapshot() },
+  { msg: '<span class="tag prop">VLAST. 3</span> Každý červený uzel má oba syny černé.', highlights: {}, treeSnapshot: tree._snapshot() },
+  { msg: '<span class="tag prop">VLAST. 4</span> Každá cesta od uzlu k listům má stejný počet černých uzlů (černá výška).', highlights: {}, treeSnapshot: tree._snapshot() },
+  { msg: '<span class="tag info">INFO</span> Zadejte číslo a zvolte operaci. Nechte prázdné pro náhodnou hodnotu!', highlights: {}, treeSnapshot: tree._snapshot() },
+]);
+
+</script>
+</body>
+</html>
