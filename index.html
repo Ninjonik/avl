@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Vizualizace stromů — (a,b) a Červeno-Černý</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+    :root{
+      --bg:#0a0a0f; --surface:#111118; --surface2:#1a1a24; --border:#2a2a3a;
+      --text:#e8e8f0; --text-dim:#9aa0b3; --accent:#7b5ea7; --accent2:#00d4aa;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+    header{height:63px;padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--surface)}
+    header h1{font-family:'JetBrains Mono',monospace;font-size:16px;letter-spacing:2px;font-weight:700;text-transform:uppercase}
+    header h1 span.a{color:var(--accent2)} header h1 span.b{color:var(--accent)}
+    .header-badge{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);padding:4px 8px;border-radius:6px}
+
+    main{flex:1;display:flex;align-items:center;justify-content:center;padding:48px}
+    .grid{display:grid;grid-template-columns:repeat(2,320px);gap:28px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border:1px solid var(--border);padding:20px;border-radius:12px;width:320px}
+    .card h2{font-family:'JetBrains Mono',monospace;margin-bottom:8px;font-size:14px}
+    .card p{color:var(--text-dim);font-size:13px;line-height:1.4;margin-bottom:12px}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent2);color:#071018;font-weight:700;text-decoration:none;font-family:'JetBrains Mono',monospace}
+    .meta{margin-top:28px;text-align:center;color:var(--text-dim);font-size:13px}
+    footer{padding:18px;text-align:center;border-top:1px solid var(--border);color:var(--text-dim);font-size:13px}
+    @media (max-width:740px){.grid{grid-template-columns:1fr;padding:0}.card{width:100%}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Vizualizace stromů</h1>
+    <div style="margin-left:12px" class="header-badge">(a,b)-strom · Červeno‑Černý strom</div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <div class="card">
+        <h2>(a,b)-STROM — vizualizace</h2>
+        <p>Interaktivní vizualizace (a,b)-stromu (B‑strom varianta). Obsahuje operace jako vložení, smazání, hledání, min/max a krokové přehrávání.</p>
+        <a class="btn" href="./abtree.html">Otevřít (a,b)-strom →</a>
+      </div>
+
+      <div class="card">
+        <h2>ČERVENO‑ČERNÝ STROM — vizualizace</h2>
+        <p>Vizualizace červeno‑černého stromu se zobrazením rotací, přebarvování a krokování algoritmů.</p>
+        <a class="btn" href="./rbtree.html">Otevřít Č‑Č strom →</a>
+      </div>
+    </div>
+  </main>
+
+  <div class="meta">
+    <div>Tyto vizualizace jsou založené na výukových materiálech a slajdech prof. Čepka.</div>
+    <div style="margin-top:6px">Stránky byly vytvořeny s pomocí Sonnet 4.6.</div>
+    <div style="margin-top:6px">Pokud si přejete něco upravit, vytvořte prosím PR.</div>
+  </div>
+
+  <footer>
+    <div>GitHub Repo: <a href="https://github.com/Ninjonik/avl" style="color:var(--accent2);text-decoration:none">Ninjonik/avl</a>.</div>
+  </footer>
+</body>
+</html>
+
